@@ -73,10 +73,13 @@
   .entry-row a:hover { color: #3a3a8a; text-decoration: underline; }
   .entry-archived { color: #999; font-style: italic; }
   .badge { font-size: 0.7rem; padding: 0.1rem 0.45rem; border: 1px solid; border-radius: 2px; font-family: monospace; text-transform: uppercase; margin-left: 0.5rem; }
-  .badge-safe { color: var(--safe-color); border-color: var(--safe-color); }
-  .badge-unsafe { color: var(--unsafe-color); border-color: var(--unsafe-color); }
-  .badge-deadzone { color: var(--dead-color); border-color: var(--dead-color); }
-  .badge-neutral { color: var(--muted); border-color: var(--muted); }
+  .badge-class0 { color: var(--safe-color); border-color: var(--safe-color); }
+  .badge-class1 { color: #4a7a2a; border-color: #4a7a2a; }
+  .badge-class2 { color: #b38600; border-color: #b38600; }
+  .badge-class3 { color: var(--unsafe-color); border-color: var(--unsafe-color); }
+  .badge-class4 { color: #8b3a00; border-color: #8b3a00; }
+  .badge-class5 { color: var(--dead-color); border-color: var(--dead-color); }
+  .badge-deadzone { color: #000; border-color: #000; }
 
   #entry-page { background: var(--white); border: 1px solid var(--border); padding: 2rem; }
   #entry-page .entry-title { font-size: 2rem; margin-bottom: 0.25rem; }
@@ -260,10 +263,13 @@
       <label>Classification / Badge</label>
       <select id="f-badge">
         <option value="">None</option>
-        <option value="safe">Safe</option>
-        <option value="unsafe">Unsafe</option>
+        <option value="class0">Class 0</option>
+        <option value="class1">Class 1</option>
+        <option value="class2">Class 2</option>
+        <option value="class3">Class 3</option>
+        <option value="class4">Class 4</option>
+        <option value="class5">Class 5</option>
         <option value="deadzone">Deadzone</option>
-        <option value="neutral">Neutral</option>
       </select>
     </div>
     <div class="form-row"><label>Image URL (optional)</label><input class="input" id="f-img" type="text" placeholder="https://…"></div>
