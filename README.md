@@ -1,0 +1,2 @@
+Lovely little Backrooms wikidot inspired project! I've always love the idea of having my own website for a Backrooms Wiki of my own and as a solo dev, means a lot to finally get this posted :D
+If you are reading this, especially using the website for anything, whether that be fan projects or anything really, thank you for supporting me and even if you don't credit me (which I would prefer you did but not gonna give you a death sentence) I'm still happy to know I could be useful!
