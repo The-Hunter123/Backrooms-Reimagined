@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backrooms Reimagined</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js"></script>
+<style>
+  :root {
+    --border: #bbb;
+    --bg: #f4f4f0;
+    --white: #fff;
+    --text: #1a1a1a;
+    --muted: #666;
+    --accent: #3a3a3a;
+    --danger: #c0392b;
+    --safe-color: #2a7a2a;
+    --unsafe-color: #b34a00;
+    --dead-color: #8b0000;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', serif;
+    background-color: var(--bg);
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8c8c0' fill-opacity='0.18'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    color: var(--text);
+    min-height: 100vh;
+  }
+  a { color: #3a3a8a; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  #site-nav {
+    background: var(--white);
+    border-bottom: 2px solid var(--border);
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  #site-title { font-size: 1.1rem; font-weight: bold; padding: 0.75rem 0; letter-spacing: 0.03em; }
+  #site-title span { color: var(--muted); font-weight: normal; }
+  #nav-links { display: flex; gap: 1.5rem; font-size: 0.9rem; }
+  #nav-links a { color: var(--text); padding: 0.75rem 0; display: block; border-bottom: 2px solid transparent; }
+  #nav-links a:hover { border-bottom-color: var(--text); text-decoration: none; }
+
+  #app { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  #hero { background: var(--white); border: 1px solid var(--border); padding: 2rem; margin-bottom: 1.5rem; }
+  #hero h1 { font-size: 1.8rem; margin-bottom: 0.75rem; }
+  #hero p { color: var(--muted); line-height: 1.7; font-size: 0.95rem; }
+
+  .category-block { margin-bottom: 1rem; border: 1px solid var(--border); background: var(--white); }
+  .category-header { display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 1rem; cursor: pointer; background: #f0f0ec; border-bottom: 1px solid var(--border); user-select: none; }
+  .category-header:hover { background: #e8e8e4; }
+  .category-header h2 { font-size: 1rem; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; }
+  .chevron { font-size: 0.75rem; transition: transform 0.2s; }
+  .chevron.open { transform: rotate(180deg); }
+  .category-body { display: none; }
+  .category-body.open { display: block; }
+  .sub-block { border-bottom: 1px solid #e0e0d8; }
+  .sub-block:last-child { border-bottom: none; }
+  .sub-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem 0.5rem 1.5rem; cursor: pointer; background: #fafaf8; }
+  .sub-header:hover { background: #f0f0ec; }
+  .sub-header span { font-size: 0.85rem; color: var(--muted); font-style: italic; }
+  .sub-body { display: none; padding: 0.25rem 0; }
+  .sub-body.open { display: block; }
+  .entry-row { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 1rem 0.45rem 2.5rem; border-bottom: 1px solid #efefeb; font-size: 0.9rem; }
+  .entry-row:last-child { border-bottom: none; }
+  .entry-row a { color: var(--text); }
+  .entry-row a:hover { color: #3a3a8a; text-decoration: underline; }
+  .entry-archived { color: #999; font-style: italic; }
+  .badge { font-size: 0.7rem; padding: 0.1rem 0.45rem; border: 1px solid; border-radius: 2px; font-family: monospace; text-transform: uppercase; margin-left: 0.5rem; }
+  .badge-safe { color: var(--safe-color); border-color: var(--safe-color); }
+  .badge-unsafe { color: var(--unsafe-color); border-color: var(--unsafe-color); }
+  .badge-deadzone { color: var(--dead-color); border-color: var(--dead-color); }
+  .badge-neutral { color: var(--muted); border-color: var(--muted); }
+
+  #entry-page { background: var(--white); border: 1px solid var(--border); padding: 2rem; }
+  #entry-page .entry-title { font-size: 2rem; margin-bottom: 0.25rem; }
+  #entry-page .entry-meta { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  #entry-page .entry-cat { font-size: 0.8rem; color: var(--muted); font-family: monospace; text-transform: uppercase; }
+  .entry-img { width: 100%; max-height: 350px; object-fit: cover; border: 1px solid var(--border); margin-bottom: 1.5rem; display: block; }
+  .entry-body { line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap; }
+  .entry-fields { margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  .entry-field { display: flex; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+  .entry-field:last-child { border-bottom: none; }
+  .field-key { font-weight: bold; min-width: 140px; color: var(--accent); }
+  .back-btn { margin-bottom: 1.5rem; font-size: 0.85rem; cursor: pointer; color: #3a3a8a; background: none; border: none; padding: 0; }
+  .back-btn:hover { text-decoration: underline; }
+
+  #about-page { background: var(--white); border: 1px solid var(--border); padding: 2rem; line-height: 1.8; }
+  #about-page h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+
+  #admin-page { background: var(--white); border: 1px solid var(--border); padding: 2rem; }
+  #admin-login { max-width: 340px; margin: 3rem auto; text-align: center; }
+  #admin-login h2 { margin-bottom: 1.5rem; font-size: 1.3rem; }
+  .input { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border); font-size: 0.9rem; font-family: inherit; margin-bottom: 0.75rem; background: var(--bg); }
+  .btn { padding: 0.55rem 1.25rem; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-size: 0.85rem; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #555; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-outline { background: none; color: var(--accent); }
+  .btn-outline:hover { background: var(--accent); color: #fff; }
+  .btn-danger { border-color: var(--danger); background: var(--danger); }
+  .btn-danger:hover { background: #a93226; }
+  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.78rem; }
+  .error-msg { color: var(--danger); font-size: 0.85rem; margin-top: 0.5rem; }
+  .success-msg { color: var(--safe-color); font-size: 0.85rem; margin-top: 0.5rem; }
+
+  #admin-panel h2 { font-size: 1.3rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; }
+  .admin-tabs { display: flex; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); }
+  .admin-tab { padding: 0.5rem 1.25rem; font-size: 0.85rem; cursor: pointer; background: none; border: none; font-family: inherit; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .admin-tab.active { color: var(--text); font-weight: bold; border-bottom-color: var(--text); }
+  .admin-tab-content { display: none; }
+  .admin-tab-content.active { display: block; }
+
+  .admin-entry-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.75rem; border: 1px solid var(--border); margin-bottom: 0.4rem; background: var(--bg); font-size: 0.88rem; }
+  .admin-entry-row.archived { opacity: 0.55; }
+  .admin-entry-info { flex: 1; }
+  .admin-entry-name { font-weight: bold; }
+  .admin-entry-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+  .three-dot-wrap { position: relative; }
+  .three-dot-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.5rem; color: var(--muted); }
+  .three-dot-btn:hover { color: var(--text); }
+  .dropdown { display: none; position: absolute; right: 0; top: 100%; background: var(--white); border: 1px solid var(--border); min-width: 160px; z-index: 200; box-shadow: 2px 2px 8px rgba(0,0,0,0.08); }
+  .dropdown.open { display: block; }
+  .dropdown-item { padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; display: block; width: 100%; text-align: left; background: none; border: none; font-family: inherit; }
+  .dropdown-item:hover { background: #f0f0ec; }
+  .dropdown-item.danger { color: var(--danger); }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--white); border: 1px solid var(--border); width: 100%; max-width: 600px; padding: 2rem; margin: auto; }
+  .modal h3 { margin-bottom: 1.5rem; font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; }
+  .form-row { margin-bottom: 1rem; }
+  .form-row label { display: block; font-size: 0.82rem; font-weight: bold; margin-bottom: 0.35rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.03em; }
+  .form-row select, .form-row input, .form-row textarea { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--border); font-size: 0.9rem; font-family: inherit; background: var(--bg); }
+  .form-row textarea { resize: vertical; min-height: 100px; }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+  .custom-field-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .custom-field-row input { flex: 1; padding: 0.45rem 0.6rem; border: 1px solid var(--border); font-family: inherit; font-size: 0.85rem; background: var(--bg); }
+  .remove-field-btn { background: none; border: 1px solid var(--border); cursor: pointer; padding: 0 0.5rem; color: var(--muted); font-size: 0.85rem; }
+  .add-field-btn { font-size: 0.8rem; color: #3a3a8a; background: none; border: none; cursor: pointer; padding: 0; margin-top: 0.25rem; }
+  .add-field-btn:hover { text-decoration: underline; }
+  .confirm-modal { max-width: 380px; text-align: center; }
+  .confirm-modal p { margin-bottom: 1.5rem; color: var(--muted); font-size: 0.9rem; }
+
+  .settings-section { margin-bottom: 2rem; }
+  .settings-section h3 { font-size: 0.95rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+
+  #search-bar { width: 100%; padding: 0.65rem 1rem; border: 1px solid var(--border); font-size: 0.95rem; font-family: inherit; background: var(--white); margin-bottom: 1.5rem; }
+  .no-results { color: var(--muted); font-style: italic; font-size: 0.9rem; padding: 1rem 0; }
+  .spinner { text-align: center; padding: 2rem; color: var(--muted); font-style: italic; font-size: 0.9rem; }
+
+  @media(max-width:600px) {
+    #app { padding: 1rem 0.5rem; }
+    #entry-page, #about-page, #admin-page { padding: 1.25rem; }
+    .field-key { min-width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="site-nav">
+  <div id="site-title">BACKROOMS REIMAGINED <span>/ Field Guide</span></div>
+  <div id="nav-links">
+    <a href="#" onclick="showPage('home');return false;">Home</a>
+    <a href="#" onclick="showPage('index');return false;">Index</a>
+    <a href="#" onclick="showPage('about');return false;">About</a>
+  </div>
+</nav>
+
+<div id="app">
+  <!-- HOME -->
+  <div id="page-home" class="page active">
+    <div id="hero">
+      <h1 id="site-name-display">Backrooms Reimagined</h1>
+      <p id="site-desc-display">Loading…</p>
+    </div>
+    <div id="home-index"></div>
+  </div>
+
+  <!-- INDEX -->
+  <div id="page-index" class="page">
+    <input id="search-bar" type="text" placeholder="Search entries…" oninput="renderSearch(this.value)">
+    <div id="search-results" style="display:none"></div>
+    <div id="full-index"></div>
+  </div>
+
+  <!-- ABOUT -->
+  <div id="page-about" class="page">
+    <div id="about-page">
+      <h1>About</h1>
+      <div id="about-body"></div>
+    </div>
+  </div>
+
+  <!-- ENTRY -->
+  <div id="page-entry" class="page">
+    <div id="entry-page">
+      <button class="back-btn" onclick="goBack()">← Back</button>
+      <div id="entry-content"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="page-admin" class="page">
+    <div id="admin-login">
+      <h2>Admin Access</h2>
+      <input class="input" type="email" id="admin-email" placeholder="Email">
+      <input class="input" type="password" id="admin-pw" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn" id="login-btn" onclick="doLogin()">Enter</button>
+      <div class="error-msg" id="login-err"></div>
+    </div>
+    <div id="admin-panel" style="display:none">
+      <h2>Admin Panel</h2>
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchAdminTab('entries',this)">Entries</button>
+        <button class="admin-tab" onclick="switchAdminTab('settings',this)">Site Settings</button>
+      </div>
+      <div id="admin-tab-entries" class="admin-tab-content active">
+        <button class="btn" onclick="openAddModal()">+ Add Entry</button>
+        <div class="admin-entry-list" id="admin-entry-list" style="margin-top:1rem"></div>
+      </div>
+      <div id="admin-tab-settings" class="admin-tab-content">
+        <div class="settings-section">
+          <h3>Site Identity</h3>
+          <div class="form-row"><label>Site Name</label><input class="input" id="set-name" type="text"></div>
+          <div class="form-row"><label>Site Description</label><textarea class="input" id="set-desc" rows="3"></textarea></div>
+        </div>
+        <div class="settings-section">
+          <h3>About Page</h3>
+          <div class="form-row"><label>About Content</label><textarea class="input" id="set-about" rows="6"></textarea></div>
+        </div>
+        <button class="btn" onclick="saveSettings()">Save Settings</button>
+        <div id="settings-msg" style="margin-top:0.5rem"></div>
+        <div style="margin-top:2rem"><button class="btn btn-outline btn-sm" onclick="doLogout()">Log Out</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ENTRY MODAL -->
+<div class="modal-overlay" id="entry-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add Entry</h3>
+    <div class="form-row">
+      <label>Category</label>
+      <select id="f-cat">
+        <option value="levels">Level</option>
+        <option value="entities">Entity</option>
+        <option value="items">Item</option>
+        <option value="logs">Log</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Title</label><input class="input" id="f-title" type="text" placeholder="e.g. Level 0 — The Lobby"></div>
+    <div class="form-row">
+      <label>Classification / Badge</label>
+      <select id="f-badge">
+        <option value="">None</option>
+        <option value="safe">Safe</option>
+        <option value="unsafe">Unsafe</option>
+        <option value="deadzone">Deadzone</option>
+        <option value="neutral">Neutral</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Image URL (optional)</label><input class="input" id="f-img" type="text" placeholder="https://…"></div>
+    <div class="form-row"><label>Description</label><textarea id="f-desc" rows="5" placeholder="Full description…"></textarea></div>
+    <div class="form-row">
+      <label>Additional Fields (optional)</label>
+      <div id="custom-fields"></div>
+      <button class="add-field-btn" onclick="addCustomField('','')">+ Add field</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('entry-modal')">Cancel</button>
+      <button class="btn" id="save-entry-btn" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal confirm-modal">
+    <h3>Confirm Delete</h3>
+    <p id="confirm-msg"></p>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG — replace these with your own if you ever migrate ────────────────
+const SB_URL = 'https://fpghprbivartjzmdaqgf.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwZ2hwcmJpdmFydGp6bWRhcWdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDEzNDMsImV4cCI6MjA5NjE3NzM0M30.hUDhVa22HFpfIGtrQBo6qkUPeezDDh8s6cR2apw8jyI';
+
+const H = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+let authToken = null;
+let currentPage = 'home', prevPage = 'home', editingId = null;
+let allEntries = [], siteSettings = {};
+
+// ─── SUPABASE HELPERS ─────────────────────────────────────────────────────────
+function sbH(token) {
+  return token
+    ? { ...H, 'Authorization': 'Bearer ' + token }
+    : H;
+}
+
+async function sbGet(table, params='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: H });
+  return r.json();
+}
+
+async function sbPost(table, body, token) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method: 'POST', headers: { ...sbH(token), 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function sbPatch(table, id, body, token) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH', headers: { ...sbH(token), 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function sbDelete(table, id, token) {
+  await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE', headers: sbH(token)
+  });
+}
+
+async function sbUpsertSetting(key, value, token) {
+  await fetch(`${SB_URL}/rest/v1/settings?key=eq.${key}`, {
+    method: 'PATCH', headers: { ...sbH(token), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ value })
+  });
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pw = document.getElementById('admin-pw').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.textContent = ''; btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY },
+      body: JSON.stringify({ email, password: pw })
+    });
+    const d = await r.json();
+    if (d.access_token) {
+      authToken = d.access_token;
+      document.getElementById('admin-login').style.display = 'none';
+      document.getElementById('admin-panel').style.display = 'block';
+      await loadAdminData();
+    } else {
+      err.textContent = d.error_description || 'Invalid credentials.';
+    }
+  } catch(e) {
+    err.textContent = 'Connection error. Please try again.';
+  }
+  btn.disabled = false; btn.textContent = 'Enter';
+}
+
+function doLogout() {
+  authToken = null;
+  document.getElementById('admin-panel').style.display = 'none';
+  document.getElementById('admin-login').style.display = 'block';
+  document.getElementById('admin-email').value = '';
+  document.getElementById('admin-pw').value = '';
+}
+
+// ─── ROUTING ──────────────────────────────────────────────────────────────────
+function showPage(name, data) {
+  if (name !== 'entry') prevPage = currentPage;
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name)?.classList.add('active');
+  closeAllDropdowns();
+  window.scrollTo(0,0);
+  if (name === 'home') renderHome();
+  if (name === 'index') renderIndex();
+  if (name === 'about') renderAbout();
+  if (name === 'entry' && data) renderEntry(data);
+  if (name === 'admin') initAdmin();
+}
+function goBack() { showPage(prevPage); }
+
+// ─── LOAD DATA ────────────────────────────────────────────────────────────────
+async function loadPublicData() {
+  const [entries, settings] = await Promise.all([
+    sbGet('entries', 'order=entry_order.asc'),
+    sbGet('settings', 'select=key,value')
+  ]);
+  allEntries = Array.isArray(entries) ? entries : [];
+  siteSettings = {};
+  if (Array.isArray(settings)) settings.forEach(s => siteSettings[s.key] = s.value);
+  document.getElementById('site-name-display').textContent = siteSettings.siteName || 'Backrooms Reimagined';
+  document.getElementById('site-desc-display').textContent = siteSettings.siteDesc || '';
+}
+
+// ─── RENDER HOME ──────────────────────────────────────────────────────────────
+function renderHome() {
+  document.getElementById('site-name-display').textContent = siteSettings.siteName || 'Backrooms Reimagined';
+  document.getElementById('site-desc-display').textContent = siteSettings.siteDesc || '';
+  document.getElementById('home-index').innerHTML = buildIndexHTML();
+}
+
+// ─── RENDER INDEX ─────────────────────────────────────────────────────────────
+function renderIndex() {
+  document.getElementById('search-bar').value = '';
+  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('full-index').style.display = 'block';
+  document.getElementById('full-index').innerHTML = buildIndexHTML();
+}
+
+const CATS = [
+  { key: 'levels', label: 'Levels' },
+  { key: 'entities', label: 'Entities' },
+  { key: 'items', label: 'Items' },
+  { key: 'logs', label: 'Logs' }
+];
+
+function buildIndexHTML() {
+  if (!allEntries.length) return '<p class="no-results">No entries yet.</p>';
+  let html = '';
+  CATS.forEach(cat => {
+    const entries = allEntries.filter(e => e.cat === cat.key);
+    if (!entries.length) return;
+    if (cat.key === 'levels') {
+      const numbered = entries.filter(e => /Level\s+(\d+)/i.test(e.title))
+        .sort((a,b) => {
+          const na = parseInt(a.title.match(/Level\s+(\d+)/i)?.[1]||9999);
+          const nb = parseInt(b.title.match(/Level\s+(\d+)/i)?.[1]||9999);
+          return na - nb;
+        });
+      const unnumbered = entries.filter(e => !/Level\s+(\d+)/i.test(e.title));
+      const groups = {};
+      numbered.forEach(e => {
+        const n = parseInt(e.title.match(/Level\s+(\d+)/i)[1]);
+        const g = Math.floor(n/100)*100;
+        const k = `${g}–${g+99}`;
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(e);
+      });
+      if (unnumbered.length) groups['Other'] = unnumbered;
+      html += `<div class="category-block"><div class="category-header" onclick="toggleCat(this)"><h2>Levels</h2><span class="chevron open">▼</span></div><div class="category-body open">`;
+      Object.entries(groups).forEach(([label, grp]) => {
+        html += `<div class="sub-block"><div class="sub-header" onclick="toggleSub(this)"><span style="font-size:0.85rem;font-weight:bold">Levels ${label}</span><span>${grp.length} entries</span></div><div class="sub-body open">`;
+        grp.forEach(e => { html += entryRowHTML(e); });
+        html += `</div></div>`;
+      });
+      html += `</div></div>`;
+    } else {
+      html += `<div class="category-block"><div class="category-header" onclick="toggleCat(this)"><h2>${cat.label}</h2><span class="chevron open">▼</span></div><div class="category-body open">`;
+      entries.forEach(e => { html += entryRowHTML(e); });
+      html += `</div></div>`;
+    }
+  });
+  return html;
+}
+
+function entryRowHTML(e) {
+  const badge = e.badge ? `<span class="badge badge-${e.badge}">${e.badge}</span>` : '';
+  if (e.archived) return `<div class="entry-row"><span class="entry-archived">[TEMPORARILY ARCHIVED] ${esc(e.title)}</span>${badge}</div>`;
+  return `<div class="entry-row"><a href="#" onclick="openEntry('${e.id}');return false;">${esc(e.title)}</a>${badge}</div>`;
+}
+
+function toggleCat(el) {
+  el.querySelector('.chevron').classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+function toggleSub(el) { el.nextElementSibling.classList.toggle('open'); }
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+function renderSearch(q) {
+  const sr = document.getElementById('search-results');
+  const fi = document.getElementById('full-index');
+  if (!q.trim()) { sr.style.display='none'; fi.style.display='block'; return; }
+  fi.style.display='none'; sr.style.display='block';
+  const low = q.toLowerCase();
+  const res = allEntries.filter(e => !e.archived && (
+    e.title.toLowerCase().includes(low) ||
+    (e.description||'').toLowerCase().includes(low) ||
+    (e.fields||[]).some(f => f.val?.toLowerCase().includes(low))
+  ));
+  sr.innerHTML = res.length ? res.map(e => entryRowHTML(e)).join('') : '<p class="no-results">No results found.</p>';
+}
+
+// ─── ENTRY PAGE ───────────────────────────────────────────────────────────────
+function openEntry(id) {
+  const e = allEntries.find(x => x.id === id);
+  if (!e || e.archived) return;
+  showPage('entry', e);
+}
+function renderEntry(e) {
+  let html = `<div class="entry-meta"><span class="entry-cat">${e.cat}</span>${e.badge?`<span class="badge badge-${e.badge}">${e.badge}</span>`:''}</div>`;
+  html += `<h1 class="entry-title">${esc(e.title)}</h1>`;
+  if (e.img) html += `<img class="entry-img" src="${esc(e.img)}" alt="${esc(e.title)}" onerror="this.style.display='none'">`;
+  if (e.description) html += `<div class="entry-body">${esc(e.description)}</div>`;
+  if (e.fields?.length) {
+    html += `<div class="entry-fields">`;
+    e.fields.forEach(f => { html += `<div class="entry-field"><div class="field-key">${esc(f.key)}</div><div class="field-val">${esc(f.val)}</div></div>`; });
+    html += `</div>`;
+  }
+  document.getElementById('entry-content').innerHTML = html;
+}
+
+// ─── ABOUT ────────────────────────────────────────────────────────────────────
+function renderAbout() {
+  document.getElementById('about-body').textContent = siteSettings.about || '';
+}
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
+function initAdmin() {
+  if (authToken) {
+    document.getElementById('admin-login').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+  } else {
+    document.getElementById('admin-login').style.display = 'block';
+    document.getElementById('admin-panel').style.display = 'none';
+  }
+}
+
+async function loadAdminData() {
+  await loadPublicData();
+  renderAdminEntries();
+  loadSettingsForm();
+}
+
+function switchAdminTab(name, el) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('admin-tab-' + name).classList.add('active');
+}
+
+function renderAdminEntries() {
+  const list = document.getElementById('admin-entry-list');
+  if (!allEntries.length) { list.innerHTML = '<p class="no-results">No entries yet.</p>'; return; }
+  list.innerHTML = allEntries.map(e => `
+    <div class="admin-entry-row ${e.archived?'archived':''}">
+      <div class="admin-entry-info">
+        <div class="admin-entry-name">${e.archived?'[ARCHIVED] ':''}${esc(e.title)}</div>
+        <div class="admin-entry-sub">${e.cat}${e.badge?' · '+e.badge:''}</div>
+      </div>
+      <div class="three-dot-wrap">
+        <button class="three-dot-btn" onclick="toggleDropdown('dd-${e.id}',event)">⋮</button>
+        <div class="dropdown" id="dd-${e.id}">
+          <button class="dropdown-item" onclick="openEditModal('${e.id}')">✏️ Edit</button>
+          <button class="dropdown-item" onclick="toggleArchive('${e.id}')">${e.archived?'📤 Unarchive':'📦 Archive'}</button>
+          <button class="dropdown-item danger" onclick="confirmDelete('${e.id}')">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function toggleArchive(id) {
+  closeAllDropdowns();
+  const e = allEntries.find(x => x.id === id);
+  if (!e) return;
+  await sbPatch('entries', id, { archived: !e.archived }, authToken);
+  await loadPublicData();
+  renderAdminEntries();
+}
+
+function confirmDelete(id) {
+  closeAllDropdowns();
+  const e = allEntries.find(x => x.id === id);
+  document.getElementById('confirm-msg').textContent = `Delete "${e.title}"? This cannot be undone.`;
+  document.getElementById('confirm-ok').onclick = async () => {
+    await sbDelete('entries', id, authToken);
+    await loadPublicData();
+    renderAdminEntries();
+    closeModal('confirm-modal');
+  };
+  openModal('confirm-modal');
+}
+
+// ─── ENTRY MODAL ──────────────────────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add Entry';
+  ['f-cat','f-title','f-badge','f-img','f-desc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el.tagName === 'SELECT') el.value = id === 'f-cat' ? 'levels' : '';
+    else el.value = '';
+  });
+  document.getElementById('custom-fields').innerHTML = '';
+  openModal('entry-modal');
+}
+
+function openEditModal(id) {
+  closeAllDropdowns();
+  const e = allEntries.find(x => x.id === id);
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Entry';
+  document.getElementById('f-cat').value = e.cat;
+  document.getElementById('f-title').value = e.title;
+  document.getElementById('f-badge').value = e.badge || '';
+  document.getElementById('f-img').value = e.img || '';
+  document.getElementById('f-desc').value = e.description || '';
+  document.getElementById('custom-fields').innerHTML = '';
+  (e.fields||[]).forEach(f => addCustomField(f.key, f.val));
+  openModal('entry-modal');
+}
+
+function addCustomField(k='', v='') {
+  const cf = document.getElementById('custom-fields');
+  const row = document.createElement('div');
+  row.className = 'custom-field-row';
+  row.innerHTML = `<input type="text" placeholder="Field name" value="${esc(k)}">
+    <input type="text" placeholder="Value" value="${esc(v)}">
+    <button class="remove-field-btn" onclick="this.parentElement.remove()">✕</button>`;
+  cf.appendChild(row);
+}
+
+async function saveEntry() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { alert('Title is required.'); return; }
+  const btn = document.getElementById('save-entry-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const fields = [];
+  document.querySelectorAll('#custom-fields .custom-field-row').forEach(row => {
+    const ins = row.querySelectorAll('input');
+    const k = ins[0].value.trim(), v = ins[1].value.trim();
+    if (k) fields.push({ key: k, val: v });
+  });
+  const payload = {
+    cat: document.getElementById('f-cat').value,
+    title,
+    badge: document.getElementById('f-badge').value,
+    img: document.getElementById('f-img').value.trim(),
+    description: document.getElementById('f-desc').value,
+    fields,
+    entry_order: editingId ? allEntries.find(e=>e.id===editingId)?.entry_order : allEntries.length
+  };
+  if (editingId) {
+    await sbPatch('entries', editingId, payload, authToken);
+  } else {
+    payload.id = 'e_' + Date.now();
+    payload.archived = false;
+    await sbPost('entries', payload, authToken);
+  }
+  await loadPublicData();
+  renderAdminEntries();
+  closeModal('entry-modal');
+  btn.disabled = false; btn.textContent = 'Save Entry';
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
+function loadSettingsForm() {
+  document.getElementById('set-name').value = siteSettings.siteName || '';
+  document.getElementById('set-desc').value = siteSettings.siteDesc || '';
+  document.getElementById('set-about').value = siteSettings.about || '';
+}
+
+async function saveSettings() {
+  const msg = document.getElementById('settings-msg');
+  msg.textContent = 'Saving…'; msg.className = '';
+  const updates = {
+    siteName: document.getElementById('set-name').value.trim(),
+    siteDesc: document.getElementById('set-desc').value.trim(),
+    about: document.getElementById('set-about').value
+  };
+  await Promise.all(Object.entries(updates).map(([k,v]) => sbUpsertSetting(k, v, authToken)));
+  await loadPublicData();
+  msg.textContent = 'Settings saved.'; msg.className = 'success-msg';
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ─── DROPDOWNS ────────────────────────────────────────────────────────────────
+function toggleDropdown(id, e) {
+  e.stopPropagation();
+  const dd = document.getElementById(id);
+  const wasOpen = dd.classList.contains('open');
+  closeAllDropdowns();
+  if (!wasOpen) dd.classList.add('open');
+}
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+}
+document.addEventListener('click', closeAllDropdowns);
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await loadPublicData();
+  renderHome();
+  if (location.hash === '#/admin') showPage('admin');
+})();
+</script>
+</body>
+</html>
